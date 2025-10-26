@@ -16,7 +16,7 @@ VERIFICATION_LOG="/sdcard/maoa_verification_log.txt"
 GITHUB_RAW_URL="https://raw.githubusercontent.com/qingmingmayi/-/refs/heads/main/MaoA工具箱.sh"
 TEMP_DIR="/data/local/tmp/maoa_update"
 TEMP_SCRIPT="$TEMP_DIR/maoa_temp_script.sh"
-CURRENT_VERSION="4.5"  # 当前脚本版本
+CURRENT_VERSION="4.6"  # 当前脚本版本
 
 # 默认目录配置
 DEFAULT_DIRECTORIES=(
@@ -89,13 +89,15 @@ delete_backup() {
     BACKUP_PATH="${SCRIPT_PATH}.bak"
     
     if [ -f "$BACKUP_PATH" ]; then
-        echo -e "${INFO_COLOR}▶ 发现备份文件，正在删除...${RESET_COLOR}"
+        echo -e "${INFO_COLOR}▶ 发现备份文件，正在删除: $BACKUP_PATH${RESET_COLOR}"
         rm -f "$BACKUP_PATH"
         if [ ! -f "$BACKUP_PATH" ]; then
             echo -e "${SUCCESS_COLOR}✓ 备份文件已删除${RESET_COLOR}"
         else
             echo -e "${WARNING_COLOR}✗ 无法删除备份文件${RESET_COLOR}"
         fi
+    else
+        echo -e "${INFO_COLOR}▶ 未找到备份文件${RESET_COLOR}"
     fi
 }
 
@@ -446,6 +448,8 @@ main() {
                 wait_for_key
                 ;;
             4)
+                # 退出前删除备份文件
+                delete_backup
                 echo -e "${SUCCESS_COLOR}✓ 已退出${RESET_COLOR}"
                 exit 0
                 ;;

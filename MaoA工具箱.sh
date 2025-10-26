@@ -16,7 +16,7 @@ VERIFICATION_LOG="/sdcard/maoa_verification_log.txt"
 GITHUB_RAW_URL="https://raw.githubusercontent.com/qingmingmayi/-/refs/heads/main/MaoA工具箱.sh"
 TEMP_DIR="/data/local/tmp/maoa_update"
 TEMP_SCRIPT="$TEMP_DIR/maoa_temp_script.sh"
-CURRENT_VERSION="4.3"  # 当前脚本版本
+CURRENT_VERSION="4.4"  # 当前脚本版本
 
 # 默认目录配置
 DEFAULT_DIRECTORIES=(
@@ -192,10 +192,14 @@ save_directories() {
     echo -e "${SUCCESS_COLOR}✓ 目录配置已保存${RESET_COLOR}"
 }
 
-# 加载目录配置
+# 加载目录配置 (兼容Android shell)
 load_directories() {
     if [ -f "$CONFIG_FILE" ]; then
-        mapfile -t directories < "$CONFIG_FILE"
+        # 使用while循环替代mapfile
+        directories=()
+        while IFS= read -r line; do
+            directories+=("$line")
+        done < "$CONFIG_FILE"
         echo "${directories[@]}"
     else
         echo "${DEFAULT_DIRECTORIES[@]}"

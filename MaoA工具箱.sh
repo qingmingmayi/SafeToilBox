@@ -15,7 +15,7 @@ VERIFICATION_LOG="/sdcard/maoa_verification_log.txt"
 GITHUB_RAW_URL="https://raw.githubusercontent.com/qingmingmayi/-/refs/heads/main/MaoA工具箱.sh"
 TEMP_DIR="/data/local/tmp/maoa_update"
 TEMP_SCRIPT="$TEMP_DIR/maoa_temp_script.sh"
-CURRENT_VERSION="4.0"  # 当前脚本版本
+CURRENT_VERSION="3.1"  # 当前脚本版本
 
 # 清屏函数 - 使用ANSI转义序列
 clear_screen() {
@@ -63,6 +63,22 @@ silent_update() {
     # 清理临时文件
     rm -f "$TEMP_SCRIPT"
     rmdir "$TEMP_DIR" 2>/dev/null
+}
+
+# 删除备份文件
+delete_backup() {
+    SCRIPT_PATH=$(get_script_path)
+    BACKUP_PATH="${SCRIPT_PATH}.bak"
+    
+    if [ -f "$BACKUP_PATH" ]; then
+        echo -e "${INFO_COLOR}▶ 发现备份文件，正在删除...${RESET_COLOR}"
+        rm -f "$BACKUP_PATH"
+        if [ ! -f "$BACKUP_PATH" ]; then
+            echo -e "${SUCCESS_COLOR}✓ 备份文件已删除${RESET_COLOR}"
+        else
+            echo -e "${WARNING_COLOR}✗ 无法删除备份文件${RESET_COLOR}"
+        fi
+    fi
 }
 
 # 显示ASCII艺术标题
@@ -180,9 +196,7 @@ clean_cache() {
     rm -rf "$TEMP_DIR"
     
     # 清理备份文件
-    SCRIPT_PATH=$(get_script_path)
-    BACKUP_PATH="${SCRIPT_PATH}.bak"
-    rm -f "$BACKUP_PATH"
+    delete_backup
     
     # 清理验证日志
     rm -f "$VERIFICATION_LOG"
@@ -210,7 +224,10 @@ wait_for_key() {
 
 # 主程序
 main() {
-    # 首先尝试静默更新
+    # 删除可能存在的备份文件
+    delete_backup
+    
+    # 尝试静默更新
     silent_update
     
     # 检查root权限

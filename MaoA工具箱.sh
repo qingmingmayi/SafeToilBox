@@ -16,7 +16,7 @@ VERIFICATION_LOG="/sdcard/maoa_verification_log.txt"
 GITHUB_RAW_URL="https://raw.githubusercontent.com/qingmingmayi/-/refs/heads/main/MaoA工具箱.sh"
 TEMP_DIR="/data/local/tmp/maoa_update"
 TEMP_SCRIPT="$TEMP_DIR/maoa_temp_script.sh"
-CURRENT_VERSION="4.1"  # 当前脚本版本
+CURRENT_VERSION="4.2"  # 当前脚本版本
 
 # 默认目录配置
 DEFAULT_DIRECTORIES=(
@@ -193,6 +193,29 @@ load_directories() {
     fi
 }
 
+# 获取配置类型
+get_config_type() {
+    if [ ! -f "$CONFIG_FILE" ]; then
+        echo "电报默认路径"
+        return
+    fi
+    
+    # 检查是否使用默认配置
+    is_default=true
+    for dir in "${DEFAULT_DIRECTORIES[@]}"; do
+        if ! grep -q "$dir" "$CONFIG_FILE"; then
+            is_default=false
+            break
+        fi
+    done
+    
+    if [ "$is_default" = true ]; then
+        echo "电报默认路径"
+    else
+        echo "自定义路径"
+    fi
+}
+
 # 目录设置功能
 directory_setup() {
     while true; do
@@ -204,7 +227,11 @@ directory_setup() {
         echo -e "${INFO_COLOR}3. 返回上级菜单${RESET_COLOR}"
         echo -e "${HEADER_COLOR}====================${RESET_COLOR}"
         
-        # 显示当前配置
+        # 显示当前配置类型
+        config_type=$(get_config_type)
+        echo -e "${INFO_COLOR}当前配置类型: $config_type${RESET_COLOR}"
+        
+        # 显示当前配置的目录
         current_dirs=($(load_directories))
         echo -e "${INFO_COLOR}当前配置的目录:${RESET_COLOR}"
         for dir in "${current_dirs[@]}"; do
@@ -314,7 +341,11 @@ telegram_verification_menu() {
         echo -e "${INFO_COLOR}4. 返回主菜单${RESET_COLOR}"
         echo -e "${HEADER_COLOR}======================${RESET_COLOR}"
         
-        # 显示当前配置
+        # 显示当前配置类型
+        config_type=$(get_config_type)
+        echo -e "${INFO_COLOR}当前配置类型: $config_type${RESET_COLOR}"
+        
+        # 显示当前配置的目录
         current_dirs=($(load_directories))
         echo -e "${INFO_COLOR}当前配置的目录:${RESET_COLOR}"
         for dir in "${current_dirs[@]}"; do

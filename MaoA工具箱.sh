@@ -1,6 +1,5 @@
 #!/system/bin/sh
 
-# 简洁美观的颜色方案
 HEADER_COLOR='\033[1;36m'   # 青色加粗
 SUCCESS_COLOR='\033[1;32m'  # 绿色加粗
 WARNING_COLOR='\033[1;33m'  # 黄色加粗

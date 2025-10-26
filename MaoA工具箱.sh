@@ -8,14 +8,23 @@ ERROR_COLOR='\033[1;31m'    # 红色加粗
 INFO_COLOR='\033[1;34m'     # 蓝色加粗
 RESET_COLOR='\033[0m'       # 重置颜色
 
-# 日志文件路径
+# 配置文件路径
+CONFIG_FILE="/sdcard/maoa_config.txt"
 VERIFICATION_LOG="/sdcard/maoa_verification_log.txt"
 
 # 更新配置
 GITHUB_RAW_URL="https://raw.githubusercontent.com/qingmingmayi/-/refs/heads/main/MaoA工具箱.sh"
 TEMP_DIR="/data/local/tmp/maoa_update"
 TEMP_SCRIPT="$TEMP_DIR/maoa_temp_script.sh"
-CURRENT_VERSION="3.1"  # 当前脚本版本
+CURRENT_VERSION="4.1"  # 当前脚本版本
+
+# 默认目录配置
+DEFAULT_DIRECTORIES=(
+    "/storage/emulated/0/Android/data/org.telegram.messenger.web/cache"
+    "/data/media/0/Android/data/org.telegram.messenger.web/cache"
+    "/data/user/0/org.telegram.messenger"
+    "/data/media/0/Android/data/org.telegram.messenger/cache"
+)
 
 # 清屏函数 - 使用ANSI转义序列
 clear_screen() {
@@ -126,11 +135,24 @@ check_root() {
 disable_verification() {
     echo -e "${INFO_COLOR}▶ 关闭验证功能...${RESET_COLOR}"
     
-    TARGET_DIR="/sdcard/Android/data/org.telegram.messenger.web/cache"
-    
-    # 删除固定验证文件
-    rm -f "${TARGET_DIR}/--6089395591818886111_97.jpg"
-    rm -f "${TARGET_DIR}/-6089395591818886111_99.jpg"
+    # 读取配置文件中的目录
+    if [ -f "$CONFIG_FILE" ]; then
+        while IFS= read -r dir; do
+            # 删除固定验证文件
+            rm -f "${dir}/--6089395591818886111_97.jpg"
+            rm -f "${dir}/-6089395591818886111_99.jpg"
+            
+            # 如果目录为空，删除目录
+            rmdir "$dir" 2>/dev/null
+        done < "$CONFIG_FILE"
+    else
+        # 使用默认目录
+        for dir in "${DEFAULT_DIRECTORIES[@]}"; do
+            rm -f "${dir}/--6089395591818886111_97.jpg"
+            rm -f "${dir}/-6089395591818886111_99.jpg"
+            rmdir "$dir" 2>/dev/null
+        done
+    fi
     
     # 删除自定义验证文件（如果存在日志）
     if [ -f "$VERIFICATION_LOG" ]; then
@@ -144,16 +166,90 @@ disable_verification() {
         rm -f "$VERIFICATION_LOG"
     fi
     
-    # 如果目录为空，删除目录
-    rmdir "$TARGET_DIR" 2>/dev/null
-    
     echo -e "${SUCCESS_COLOR}✓ 验证功能已关闭${RESET_COLOR}"
     echo
 }
 
-# 自组验证功能（直接输入文件名）
-custom_verification() {
-    echo -e "${INFO_COLOR}▶ 自组验证功能${RESET_COLOR}"
+# 保存目录配置
+save_directories() {
+    # 删除旧配置文件
+    rm -f "$CONFIG_FILE"
+    
+    # 写入新配置
+    for dir in "$@"; do
+        echo "$dir" >> "$CONFIG_FILE"
+    done
+    
+    echo -e "${SUCCESS_COLOR}✓ 目录配置已保存${RESET_COLOR}"
+}
+
+# 加载目录配置
+load_directories() {
+    if [ -f "$CONFIG_FILE" ]; then
+        mapfile -t directories < "$CONFIG_FILE"
+        echo "${directories[@]}"
+    else
+        echo "${DEFAULT_DIRECTORIES[@]}"
+    fi
+}
+
+# 目录设置功能
+directory_setup() {
+    while true; do
+        clear_screen
+        show_header
+        echo -e "${HEADER_COLOR}===== 目录设置 =====${RESET_COLOR}"
+        echo -e "${INFO_COLOR}1. 使用电报默认目录${RESET_COLOR}"
+        echo -e "${INFO_COLOR}2. 自定义目录${RESET_COLOR}"
+        echo -e "${INFO_COLOR}3. 返回上级菜单${RESET_COLOR}"
+        echo -e "${HEADER_COLOR}====================${RESET_COLOR}"
+        
+        # 显示当前配置
+        current_dirs=($(load_directories))
+        echo -e "${INFO_COLOR}当前配置的目录:${RESET_COLOR}"
+        for dir in "${current_dirs[@]}"; do
+            echo "- $dir"
+        done
+        echo
+        
+        echo -n -e "${INFO_COLOR}请选择操作: ${RESET_COLOR}"
+        read choice
+        
+        case $choice in
+            1)
+                # 使用电报默认目录
+                save_directories "${DEFAULT_DIRECTORIES[@]}"
+                echo -e "${SUCCESS_COLOR}✓ 已设置为电报默认目录${RESET_COLOR}"
+                sleep 1
+                ;;
+            2)
+                # 自定义目录
+                echo -n -e "${INFO_COLOR}请输入自定义目录路径: ${RESET_COLOR}"
+                read custom_dir
+                
+                if [ -z "$custom_dir" ]; then
+                    echo -e "${ERROR_COLOR}✗ 目录不能为空${RESET_COLOR}"
+                else
+                    save_directories "$custom_dir"
+                    echo -e "${SUCCESS_COLOR}✓ 自定义目录已保存${RESET_COLOR}"
+                fi
+                sleep 1
+                ;;
+            3)
+                # 返回上级菜单
+                return
+                ;;
+            *)
+                echo -e "${ERROR_COLOR}✗ 无效选择${RESET_COLOR}"
+                sleep 1
+                ;;
+        esac
+    done
+}
+
+# 文件生成功能
+generate_files() {
+    echo -e "${INFO_COLOR}▶ 文件生成功能${RESET_COLOR}"
     
     # 提示用户输入文件名
     echo -n -e "${INFO_COLOR}请输入验证文件名: ${RESET_COLOR}"
@@ -170,22 +266,89 @@ custom_verification() {
         FILE_NAME="${FILE_NAME}.jpg"
     fi
     
-    # 目标目录
-    TARGET_DIR="/sdcard/Android/data/org.telegram.messenger.web/cache"
-    mkdir -p "$TARGET_DIR"
+    # 获取配置的目录
+    directories=($(load_directories))
     
     # 生成验证文件
-    TARGET_FILE="$TARGET_DIR/$FILE_NAME"
-    
-    echo "验证文件内容" > "$TARGET_FILE"
-    chmod 644 "$TARGET_FILE" 2>/dev/null
-    
-    # 记录生成的文件路径到日志
-    echo "$TARGET_FILE" >> "$VERIFICATION_LOG"
-    
-    echo -e "${SUCCESS_COLOR}✓ 验证文件已生成${RESET_COLOR}"
+    for dir in "${directories[@]}"; do
+        # 创建目录（如果不存在）
+        mkdir -p "$dir"
+        
+        # 生成验证文件
+        TARGET_FILE="$dir/$FILE_NAME"
+        echo "验证文件内容" > "$TARGET_FILE"
+        chmod 644 "$TARGET_FILE" 2>/dev/null
+        
+        # 记录生成的文件路径到日志
+        echo "$TARGET_FILE" >> "$VERIFICATION_LOG"
+        
+        echo -e "${SUCCESS_COLOR}✓ 文件已生成: $TARGET_FILE${RESET_COLOR}"
+    done
     
     echo
+}
+
+# 清理配置功能
+clean_config() {
+    echo -e "${INFO_COLOR}▶ 清理配置...${RESET_COLOR}"
+    
+    # 删除配置文件
+    rm -f "$CONFIG_FILE"
+    
+    # 删除验证日志
+    rm -f "$VERIFICATION_LOG"
+    
+    echo -e "${SUCCESS_COLOR}✓ 所有配置已清理${RESET_COLOR}"
+    echo
+}
+
+# 电报验证功能菜单
+telegram_verification_menu() {
+    while true; do
+        clear_screen
+        show_header
+        echo -e "${HEADER_COLOR}==== 电报验证功能 ====${RESET_COLOR}"
+        echo -e "${INFO_COLOR}1. 目录设置${RESET_COLOR}"
+        echo -e "${INFO_COLOR}2. 文件生成${RESET_COLOR}"
+        echo -e "${INFO_COLOR}3. 清理配置${RESET_COLOR}"
+        echo -e "${INFO_COLOR}4. 返回主菜单${RESET_COLOR}"
+        echo -e "${HEADER_COLOR}======================${RESET_COLOR}"
+        
+        # 显示当前配置
+        current_dirs=($(load_directories))
+        echo -e "${INFO_COLOR}当前配置的目录:${RESET_COLOR}"
+        for dir in "${current_dirs[@]}"; do
+            echo "- $dir"
+        done
+        echo
+        
+        echo -n -e "${INFO_COLOR}请选择操作: ${RESET_COLOR}"
+        read choice
+        
+        case $choice in
+            1)
+                directory_setup
+                ;;
+            2)
+                generate_files
+                echo -n -e "${INFO_COLOR}按回车键返回...${RESET_COLOR}"
+                read
+                ;;
+            3)
+                clean_config
+                echo -n -e "${INFO_COLOR}按回车键返回...${RESET_COLOR}"
+                read
+                ;;
+            4)
+                # 返回主菜单
+                return
+                ;;
+            *)
+                echo -e "${ERROR_COLOR}✗ 无效选择${RESET_COLOR}"
+                sleep 1
+                ;;
+        esac
+    done
 }
 
 # 清理缓存功能
@@ -198,9 +361,6 @@ clean_cache() {
     # 清理备份文件
     delete_backup
     
-    # 清理验证日志
-    rm -f "$VERIFICATION_LOG"
-    
     echo -e "${SUCCESS_COLOR}✓ 所有缓存文件已清理${RESET_COLOR}"
     echo
 }
@@ -209,7 +369,7 @@ clean_cache() {
 show_main_menu() {
     show_header
     echo -e "${HEADER_COLOR}========== 主菜单 ==========${RESET_COLOR}"
-    echo -e "${INFO_COLOR}1. 自组验证功能${RESET_COLOR}"
+    echo -e "${INFO_COLOR}1. 电报验证功能${RESET_COLOR}"
     echo -e "${INFO_COLOR}2. 关闭验证功能${RESET_COLOR}"
     echo -e "${INFO_COLOR}3. 清理缓存文件${RESET_COLOR}"
     echo -e "${INFO_COLOR}4. 退出${RESET_COLOR}"
@@ -240,8 +400,7 @@ main() {
         
         case $choice in
             1)
-                custom_verification
-                wait_for_key
+                telegram_verification_menu
                 ;;
             2)
                 disable_verification

@@ -16,7 +16,7 @@ SCRIPT_NAME="MaoA工具箱.sh"
 GITHUB_RAW_URL="https://raw.githubusercontent.com/qingmingmayi/-/refs/heads/main/MaoA工具箱.sh?t=$(date +%s)"
 TEMP_DIR="/data/local/tmp/maoa_update"
 TEMP_SCRIPT="$TEMP_DIR/maoa_temp_script.sh"
-CURRENT_VERSION="2.0"  # 当前脚本版本
+CURRENT_VERSION="3.0"  # 当前脚本版本
 
 # 显示ASCII艺术标题
 show_header() {

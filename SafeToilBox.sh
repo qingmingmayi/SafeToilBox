@@ -1,8 +1,8 @@
 #!/system/bin/sh
 # 更新日志开始
-# 版本 1.2:
-#   - 优化更新检查界面
-#   - 添加更新日志预览功能
+# 版本 1.4:
+#   - 优化狗屎代码
+#   - 更新下载链接
 #   - 修复已知问题
 # 更新日志结束
 
@@ -10,9 +10,9 @@ CONFIG_DIR="/sdcard/FileManagerConfig"
 DIRS_FILE="$CONFIG_DIR/custom_dirs.conf"
 FILES_FILE="$CONFIG_DIR/created_files.conf"
 
-CURRENT_VERSION="1.2"
+CURRENT_VERSION="1.4"
 
-GITHUB_RAW_URL="https://raw.githubusercontent.com/qingmingmayi/-/refs/heads/main/SafeToilBox.sh"
+GITHUB_RAW_URL="https://raw.githubusercontent.com/qingmingmayi/SafeToilBox/refs/heads/main/SafeToilBox.sh"
 TEMP_DIR="/data/local/tmp/safetoolbox_update"
 TEMP_SCRIPT="$TEMP_DIR/safetoolbox_temp_script.sh"
 

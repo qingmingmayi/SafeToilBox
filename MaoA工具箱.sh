@@ -11,17 +11,11 @@ RESET_COLOR='\033[0m'       # 重置颜色
 # 日志文件路径
 VERIFICATION_LOG="/sdcard/maoa_verification_log.txt"
 
-# 密码链接
-PASSWORD_URL="https://raw.githubusercontent.com/qingmingmayi/-/refs/heads/main/Key.txt"
-
 # 更新配置
 SCRIPT_NAME="MaoA工具箱.sh"
 GITHUB_RAW_URL="https://raw.githubusercontent.com/qingmingmayi/-/refs/heads/main/MaoA工具箱.sh"
 TEMP_SCRIPT="/sdcard/maoa_temp_script.sh"
-CURRENT_VERSION="2.0"  # 当前脚本版本
-
-# 当前菜单状态
-CURRENT_MENU="login"  # login, main
+CURRENT_VERSION="3.0"  # 当前脚本版本
 
 # 显示ASCII艺术标题
 show_header() {
@@ -99,73 +93,6 @@ perform_update() {
     else
         echo -e "${ERROR_COLOR}✗ 更新失败: 无法替换当前脚本${RESET_COLOR}"
         rm -f "$TEMP_SCRIPT"
-        return 1
-    fi
-}
-
-# 检查网络连接和获取密码
-get_password_from_url() {
-    echo -e "${INFO_COLOR}▶ 正在获取密码...${RESET_COLOR}"
-    
-    # 尝试使用curl获取密码
-    if command -v curl >/dev/null 2>&1; then
-        PASSWORD=$(curl -s "$PASSWORD_URL" 2>/dev/null | tr -d '\n' | tr -d '\r')
-    # 尝试使用wget获取密码
-    elif command -v wget >/dev/null 2>&1; then
-        PASSWORD=$(wget -qO- "$PASSWORD_URL" 2>/dev/null | tr -d '\n' | tr -d '\r')
-    else
-        echo -e "${ERROR_COLOR}✗ 无法获取密码: 未找到curl或wget命令${RESET_COLOR}"
-        return 1
-    fi
-    
-    if [ -z "$PASSWORD" ]; then
-        echo -e "${ERROR_COLOR}✗ 密码获取失败: 请检查网络连接或链接有效性${RESET_COLOR}"
-        return 1
-    fi
-    
-    echo -e "${SUCCESS_COLOR}✓ 密码获取成功${RESET_COLOR}"
-    return 0
-}
-
-# 登录界面
-login_menu() {
-    CURRENT_MENU="login"
-    clear
-    show_header
-    
-    echo -e "${HEADER_COLOR}=== 登录界面 ===${RESET_COLOR}"
-    echo -e "${INFO_COLOR}1. 输入卡密${RESET_COLOR}"
-    echo -e "${WARNING_COLOR}2. 退出脚本${RESET_COLOR}"
-    echo
-    echo -n -e "${HEADER_COLOR}请选择操作 [1-2]: ${RESET_COLOR}"
-}
-
-# 处理登录
-handle_login() {
-    # 获取密码
-    if ! get_password_from_url; then
-        echo -e "${ERROR_COLOR}✗ 登录失败: 无法获取验证密码${RESET_COLOR}"
-        echo -n -e "${INFO_COLOR}按回车键返回...${RESET_COLOR}"
-        read
-        return 1
-    fi
-    
-    # 提示用户输入密码
-    echo
-    echo -n -e "${INFO_COLOR}请输入卡密: ${RESET_COLOR}"
-    read -s USER_INPUT
-    echo
-    
-    # 验证密码
-    if [ "$USER_INPUT" = "$PASSWORD" ]; then
-        echo -e "${SUCCESS_COLOR}✓ 登录成功${RESET_COLOR}"
-        sleep 1
-        CURRENT_MENU="main"
-        return 0
-    else
-        echo -e "${ERROR_COLOR}✗ 登录失败: 卡密错误${RESET_COLOR}"
-        echo -n -e "${INFO_COLOR}按回车键返回...${RESET_COLOR}"
-        read
         return 1
     fi
 }
@@ -249,7 +176,6 @@ custom_verification() {
 
 # 显示主菜单
 show_main_menu() {
-    CURRENT_MENU="main"
     echo -e "${HEADER_COLOR}=== 主菜单 ===${RESET_COLOR}"
     echo -e "${INFO_COLOR}1. 自组验证${RESET_COLOR}"
     echo -e "${INFO_COLOR}2. 关闭验证${RESET_COLOR}"
@@ -259,24 +185,24 @@ show_main_menu() {
     echo -n -e "${HEADER_COLOR}请选择操作 [1-4]: ${RESET_COLOR}"
 }
 
-# 主程序（登录后）
-main_after_login() {
+# 主程序
+main() {
+    clear
+    show_header
     check_root
     
-    # 每次启动时检查更新
+    # 每次启动时自动检查并更新
     if check_for_update; then
-        echo -n -e "${INFO_COLOR}是否立即更新? [y/N]: ${RESET_COLOR}"
-        read choice
-        case $choice in
-            [Yy]* ) 
-                if perform_update; then
-                    exit 0
-                fi
-                ;;
-        esac
+        echo -e "${INFO_COLOR}▶ 发现新版本，正在自动更新...${RESET_COLOR}"
+        if perform_update; then
+            exit 0
+        else
+            echo -e "${ERROR_COLOR}✗ 自动更新失败，继续运行当前版本${RESET_COLOR}"
+            sleep 2
+        fi
     fi
     
-    while [ "$CURRENT_MENU" = "main" ]; do
+    while true; do
         clear
         show_header
         show_main_menu
@@ -291,15 +217,14 @@ main_after_login() {
                 ;;
             3)
                 if check_for_update; then
-                    echo -n -e "${INFO_COLOR}是否立即更新? [y/N]: ${RESET_COLOR}"
-                    read choice
-                    case $choice in
-                        [Yy]* ) 
-                            if perform_update; then
-                                exit 0
-                            fi
-                            ;;
-                    esac
+                    echo -e "${INFO_COLOR}▶ 发现新版本，正在自动更新...${RESET_COLOR}"
+                    if perform_update; then
+                        exit 0
+                    else
+                        echo -e "${ERROR_COLOR}✗ 更新失败，继续运行当前版本${RESET_COLOR}"
+                    fi
+                else
+                    echo -e "${SUCCESS_COLOR}✓ 已是最新版本${RESET_COLOR}"
                 fi
                 ;;
             4)
@@ -314,39 +239,10 @@ main_after_login() {
                 ;;
         esac
         
-        # 只有在主菜单时才显示继续提示
-        if [ "$CURRENT_MENU" = "main" ]; then
-            echo -n -e "${INFO_COLOR}按回车键继续...${RESET_COLOR}"
-            read
-        fi
-    done
-}
-
-# 登录前主程序
-main_before_login() {
-    while [ "$CURRENT_MENU" = "login" ]; do
-        login_menu
-        read choice
-        
-        case $choice in
-            1)
-                if handle_login; then
-                    main_after_login
-                fi
-                ;;
-            2)
-                echo
-                echo -e "${SUCCESS_COLOR}✓ 脚本已退出${RESET_COLOR}"
-                exit 0
-                ;;
-            *)
-                echo -e "${ERROR_COLOR}✗ 无效选择，请输入 1-2${RESET_COLOR}"
-                echo -n -e "${INFO_COLOR}按回车键继续...${RESET_COLOR}"
-                read
-                ;;
-        esac
+        echo -n -e "${INFO_COLOR}按回车键继续...${RESET_COLOR}"
+        read
     done
 }
 
 # 运行主程序
-main_before_login
+main

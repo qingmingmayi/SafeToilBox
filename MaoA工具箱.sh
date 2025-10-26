@@ -16,7 +16,7 @@ VERIFICATION_LOG="/sdcard/maoa_verification_log.txt"
 GITHUB_RAW_URL="https://raw.githubusercontent.com/qingmingmayi/-/refs/heads/main/MaoA工具箱.sh"
 TEMP_DIR="/data/local/tmp/maoa_update"
 TEMP_SCRIPT="$TEMP_DIR/maoa_temp_script.sh"
-CURRENT_VERSION="4.2"  # 当前脚本版本
+CURRENT_VERSION="4.3"  # 当前脚本版本
 
 # 默认目录配置
 DEFAULT_DIRECTORIES=(
@@ -31,7 +31,7 @@ clear_screen() {
     printf "\033c"  # 真正的清屏命令
 }
 
-# 静默更新函数
+# 静默更新函数 - 修复版
 silent_update() {
     # 获取可靠的脚本路径
     SCRIPT_PATH=$(get_script_path)
@@ -42,14 +42,20 @@ silent_update() {
     # 下载最新脚本 - 添加时间戳避免缓存
     DOWNLOAD_URL="${GITHUB_RAW_URL}?t=$(date +%s)"
     
+    # 使用curl或wget下载
     if command -v curl >/dev/null 2>&1; then
-        curl -s -o "$TEMP_SCRIPT" "$DOWNLOAD_URL"
+        if ! curl -s -o "$TEMP_SCRIPT" "$DOWNLOAD_URL"; then
+            return 1
+        fi
     elif command -v wget >/dev/null 2>&1; then
-        wget -qO "$TEMP_SCRIPT" "$DOWNLOAD_URL"
+        if ! wget -qO "$TEMP_SCRIPT" "$DOWNLOAD_URL"; then
+            return 1
+        fi
     else
         return 1
     fi
     
+    # 检查下载是否成功
     if [ ! -s "$TEMP_SCRIPT" ]; then
         return 1
     fi
@@ -61,10 +67,13 @@ silent_update() {
     # 替换当前脚本
     if cp -f "$TEMP_SCRIPT" "$SCRIPT_PATH"; then
         chmod 755 "$SCRIPT_PATH"
+        
         # 验证版本号
         NEW_VERSION=$(grep -m1 '^CURRENT_VERSION=' "$SCRIPT_PATH" | cut -d'"' -f2)
         if [ "$NEW_VERSION" != "$CURRENT_VERSION" ]; then
             # 更新成功，重启脚本
+            echo -e "${INFO_COLOR}▶ 检测到新版本 ($NEW_VERSION)，正在重启脚本...${RESET_COLOR}"
+            sleep 1
             exec "$SCRIPT_PATH"
         fi
     fi

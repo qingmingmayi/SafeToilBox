@@ -13,7 +13,7 @@ VERIFICATION_LOG="/sdcard/maoa_verification_log.txt"
 
 # 更新配置
 SCRIPT_NAME="MaoA工具箱.sh"
-GITHUB_RAW_URL="https://raw.githubusercontent.com/qingmingmayi/-/refs/heads/main/MaoA工具箱.sh"
+GITHUB_RAW_URL="https://raw.githubusercontent.com/qingmingmayi/-/refs/heads/main/MaoA工具箱.sh?t=$(date +%s)"
 TEMP_DIR="/data/local/tmp/maoa_update"
 TEMP_SCRIPT="$TEMP_DIR/maoa_temp_script.sh"
 CURRENT_VERSION="2.0"  # 当前脚本版本
@@ -47,22 +47,44 @@ get_script_path() {
     fi
 }
 
-# 检查更新
+# 检查更新 - 解决缓存问题
 check_for_update() {
     echo -e "${INFO_COLOR}▶ 检查脚本更新...${RESET_COLOR}"
     
-    # 获取最新版本号
+    # 添加调试信息
+    echo -e "${INFO_COLOR}[DEBUG] 当前版本: $CURRENT_VERSION${RESET_COLOR}"
+    echo -e "${INFO_COLOR}[DEBUG] 原始URL: $GITHUB_RAW_URL${RESET_COLOR}"
+    
+    # 获取最新版本号 - 更精确的匹配
     if command -v curl >/dev/null 2>&1; then
-        LATEST_VERSION=$(curl -s "$GITHUB_RAW_URL" | grep -m1 "CURRENT_VERSION=" | cut -d'"' -f2)
+        # 下载整个文件到临时位置
+        mkdir -p "$TEMP_DIR"
+        curl -s -o "$TEMP_SCRIPT" "$GITHUB_RAW_URL"
+        
+        # 精确提取版本号
+        if [ -f "$TEMP_SCRIPT" ]; then
+            LATEST_VERSION=$(grep -m1 '^CURRENT_VERSION=' "$TEMP_SCRIPT" | cut -d'"' -f2)
+            echo -e "${INFO_COLOR}[DEBUG] 下载的脚本内容:${RESET_COLOR}"
+            head -n 20 "$TEMP_SCRIPT"  # 显示前20行用于调试
+        else
+            LATEST_VERSION=""
+        fi
     elif command -v wget >/dev/null 2>&1; then
         mkdir -p "$TEMP_DIR"
         wget -qO "$TEMP_SCRIPT" "$GITHUB_RAW_URL"
-        LATEST_VERSION=$(grep -m1 "CURRENT_VERSION=" "$TEMP_SCRIPT" | cut -d'"' -f2)
-        rm -f "$TEMP_SCRIPT"
+        if [ -f "$TEMP_SCRIPT" ]; then
+            LATEST_VERSION=$(grep -m1 '^CURRENT_VERSION=' "$TEMP_SCRIPT" | cut -d'"' -f2)
+            echo -e "${INFO_COLOR}[DEBUG] 下载的脚本内容:${RESET_COLOR}"
+            head -n 20 "$TEMP_SCRIPT"
+        else
+            LATEST_VERSION=""
+        fi
     else
         echo -e "${WARNING_COLOR}✗ 无法检查更新: 未找到curl或wget命令${RESET_COLOR}"
         return 1
     fi
+    
+    echo -e "${INFO_COLOR}[DEBUG] 检测到的最新版本: $LATEST_VERSION${RESET_COLOR}"
     
     if [ -z "$LATEST_VERSION" ]; then
         echo -e "${WARNING_COLOR}✗ 更新检查失败: 无法获取最新版本${RESET_COLOR}"
@@ -90,11 +112,14 @@ perform_update() {
     # 创建临时目录
     mkdir -p "$TEMP_DIR"
     
-    # 下载最新脚本
+    # 下载最新脚本 - 使用新的时间戳避免缓存
+    NEW_URL="${GITHUB_RAW_URL%\?*}"  # 移除原有时间戳
+    NEW_URL="${NEW_URL}?t=$(date +%s)"  # 添加新的时间戳
+    
     if command -v curl >/dev/null 2>&1; then
-        curl -s -o "$TEMP_SCRIPT" "$GITHUB_RAW_URL"
+        curl -s -o "$TEMP_SCRIPT" "$NEW_URL"
     elif command -v wget >/dev/null 2>&1; then
-        wget -qO "$TEMP_SCRIPT" "$GITHUB_RAW_URL"
+        wget -qO "$TEMP_SCRIPT" "$NEW_URL"
     else
         echo -e "${ERROR_COLOR}✗ 无法更新: 未找到curl或wget命令${RESET_COLOR}"
         return 1
@@ -117,7 +142,7 @@ perform_update() {
         echo -e "${SUCCESS_COLOR}✓ 更新文件已替换${RESET_COLOR}"
         
         # 验证版本号
-        NEW_VERSION=$(grep -m1 "CURRENT_VERSION=" "$SCRIPT_PATH" | cut -d'"' -f2)
+        NEW_VERSION=$(grep -m1 '^CURRENT_VERSION=' "$SCRIPT_PATH" | cut -d'"' -f2)
         if [ "$NEW_VERSION" != "$CURRENT_VERSION" ]; then
             echo -e "${SUCCESS_COLOR}✓ 更新成功! 新版本: $NEW_VERSION${RESET_COLOR}"
             echo -e "${INFO_COLOR}▶ 重新启动脚本...${RESET_COLOR}"

@@ -15,7 +15,7 @@ VERIFICATION_LOG="/sdcard/maoa_verification_log.txt"
 SCRIPT_NAME="MaoA工具箱.sh"
 GITHUB_RAW_URL="https://raw.githubusercontent.com/qingmingmayi/-/refs/heads/main/MaoA工具箱.sh"
 TEMP_SCRIPT="/sdcard/maoa_temp_script.sh"
-CURRENT_VERSION="3.0"  # 当前脚本版本
+CURRENT_VERSION="4.0"  # 当前脚本版本
 
 # 显示ASCII艺术标题
 show_header() {

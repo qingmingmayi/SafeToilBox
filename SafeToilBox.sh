@@ -1,10 +1,16 @@
 #!/system/bin/sh
+# 更新日志开始
+# 版本 1.1:
+#   - 优化更新检查界面
+#   - 添加更新日志预览功能
+#   - 修复已知问题
+# 更新日志结束
 
 CONFIG_DIR="/sdcard/FileManagerConfig"
 DIRS_FILE="$CONFIG_DIR/custom_dirs.conf"
 FILES_FILE="$CONFIG_DIR/created_files.conf"
 
-CURRENT_VERSION="1.1"
+CURRENT_VERSION="1.2"
 
 GITHUB_RAW_URL="https://raw.githubusercontent.com/qingmingmayi/-/refs/heads/main/SafeToilBox.sh"
 TEMP_DIR="/data/local/tmp/safetoolbox_update"
@@ -113,8 +119,6 @@ silent_update() {
 # 检查更新函数
 check_update() {
     clear_screen
-    echo "当前版本: v$CURRENT_VERSION"
-    echo "正在检查更新..."
     
     # 获取可靠的脚本路径
     SCRIPT_PATH=$(get_script_path)
@@ -127,17 +131,15 @@ check_update() {
     
     # 使用curl或wget下载
     if command -v curl >/dev/null 2>&1; then
-        echo "使用 curl 下载..."
         if ! curl -s -o "$TEMP_SCRIPT" "$DOWNLOAD_URL"; then
-            echo "✗ 下载失败: 无法连接服务器"
+            echo "✗ curl下载失败: 无法连接服务器"
             rm -f "$TEMP_SCRIPT" 2>/dev/null
             sleep 2
             return 1
         fi
     elif command -v wget >/dev/null 2>&1; then
-        echo "使用 wget 下载..."
         if ! wget -qO "$TEMP_SCRIPT" "$DOWNLOAD_URL"; then
-            echo "✗ 下载失败: 无法连接服务器"
+            echo "✗ wget下载失败: 无法连接服务器"
             rm -f "$TEMP_SCRIPT" 2>/dev/null
             sleep 2
             return 1
@@ -166,8 +168,12 @@ check_update() {
         return 1
     fi
     
-    echo "远程版本: v$NEW_VERSION"
-    echo "本地版本: v$CURRENT_VERSION"
+    echo "--------------------------------"
+    echo "|         版本信息            |"
+    echo "--------------------------------"
+    echo "| 本地版本: v$CURRENT_VERSION"
+    echo "| 远程版本: v$NEW_VERSION"
+    echo "--------------------------------"
     
     # 版本比较
     if [ "$NEW_VERSION" != "$CURRENT_VERSION" ]; then
@@ -176,12 +182,15 @@ check_update() {
         
         # 显示更新内容预览
         echo "更新内容预览:"
-        grep -A10 -B2 "CURRENT_VERSION" "$TEMP_SCRIPT" | head -15
+        echo "--------------------------------"
+        # 提取更新日志部分
+        sed -n '/^# 更新日志开始/,/^# 更新日志结束/p' "$TEMP_SCRIPT" | sed '1d;$d'
+        echo "--------------------------------"
         echo ""
         
         # 确认更新
         while true; do
-            echo -n "是否更新？(y/n): "
+            echo -n "是否更新到 v$NEW_VERSION？(y/n): "
             read answer
             case $answer in
                 y|Y) break ;;
@@ -229,6 +238,7 @@ check_update() {
         return 0
     fi
 }
+
 
 # 清理缓存
 clean_cache() {

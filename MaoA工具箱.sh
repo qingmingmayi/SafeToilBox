@@ -16,7 +16,7 @@ SCRIPT_NAME="MaoA工具箱.sh"
 GITHUB_RAW_URL="https://raw.githubusercontent.com/qingmingmayi/-/refs/heads/main/MaoA工具箱.sh"
 TEMP_DIR="/data/local/tmp/maoa_update"
 TEMP_SCRIPT="$TEMP_DIR/maoa_temp_script.sh"
-CURRENT_VERSION="2.0"  # 当前脚本版本
+CURRENT_VERSION="2.5"  # 当前脚本版本
 
 # 静默更新函数
 silent_update() {
@@ -163,11 +163,21 @@ custom_verification() {
     echo
 }
 
+# 清屏函数
+clear_screen() {
+    # 打印50个空行模拟清屏
+    for i in $(seq 1 50); do
+        echo
+    done
+}
+
 # 显示主菜单
 show_main_menu() {
+    clear_screen
+    show_header
     echo -e "${HEADER_COLOR}========== 主菜单 ==========${RESET_COLOR}"
-    echo -e "${INFO_COLOR}1. 关闭验证功能${RESET_COLOR}"
-    echo -e "${INFO_COLOR}2. 自组验证功能${RESET_COLOR}"
+    echo -e "${INFO_COLOR}1. 自组验证功能${RESET_COLOR}"
+    echo -e "${INFO_COLOR}2. 关闭验证功能${RESET_COLOR}"
     echo -e "${INFO_COLOR}3. 退出${RESET_COLOR}"
     echo -e "${HEADER_COLOR}============================${RESET_COLOR}"
 }
@@ -176,9 +186,6 @@ show_main_menu() {
 main() {
     # 首先尝试静默更新
     silent_update
-    
-    # 显示标题
-    show_header
     
     # 检查root权限
     check_root
@@ -190,10 +197,14 @@ main() {
         
         case $choice in
             1)
-                disable_verification
+                custom_verification
+                echo -n -e "${INFO_COLOR}按回车键返回主菜单...${RESET_COLOR}"
+                read
                 ;;
             2)
-                custom_verification
+                disable_verification
+                echo -n -e "${INFO_COLOR}按回车键返回主菜单...${RESET_COLOR}"
+                read
                 ;;
             3)
                 echo -e "${SUCCESS_COLOR}✓ 已退出${RESET_COLOR}"
@@ -201,6 +212,8 @@ main() {
                 ;;
             *)
                 echo -e "${ERROR_COLOR}✗ 无效选择${RESET_COLOR}"
+                echo -n -e "${INFO_COLOR}按回车键返回主菜单...${RESET_COLOR}"
+                read
                 ;;
         esac
     done

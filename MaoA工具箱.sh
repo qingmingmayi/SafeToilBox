@@ -1,5 +1,6 @@
 #!/system/bin/sh
 
+# 简洁美观的颜色方案
 HEADER_COLOR='\033[1;36m'   # 青色加粗
 SUCCESS_COLOR='\033[1;32m'  # 绿色加粗
 WARNING_COLOR='\033[1;33m'  # 黄色加粗
@@ -15,7 +16,7 @@ VERIFICATION_LOG="/sdcard/maoa_verification_log.txt"
 GITHUB_RAW_URL="https://raw.githubusercontent.com/qingmingmayi/-/refs/heads/main/MaoA工具箱.sh"
 TEMP_DIR="/data/local/tmp/maoa_update"
 TEMP_SCRIPT="$TEMP_DIR/maoa_temp_script.sh"
-CURRENT_VERSION="4.7"  # 当前脚本版本
+CURRENT_VERSION="4.8"  # 当前脚本版本
 
 # 默认目录配置
 DEFAULT_DIRECTORIES=(
@@ -240,7 +241,7 @@ directory_setup() {
             1)
                 # 使用电报默认目录
                 save_directories "${DEFAULT_DIRECTORIES[@]}"
-                echo -e "${SUCCESS_COLOR}✓ 已设置为电报默认目录${RESET_COLOR}"
+                echo -e "${SUCCESS_COLOR}✓ 已设置为电报默认目录${RES极速版LOR}"
                 sleep 1
                 ;;
             2)
@@ -248,7 +249,7 @@ directory_setup() {
                 echo -n -e "${INFO_COLOR}请输入自定义目录路径: ${RESET_COLOR}"
                 read custom_dir
                 
-                if [ -z "$custom_dir" ]; then
+                if [ -z "$custom极速版_dir" ]; then
                     echo -e "${ERROR_COLOR}✗ 目录不能为空${RESET_COLOR}"
                 else
                     save_directories "$custom_dir"
@@ -361,7 +362,7 @@ telegram_verification_menu() {
                 ;;
             3)
                 clean_config
-                echo -n -e "${INFO_COLOR}按回车键返回...${RESET_COLOR}"
+                echo -n -e "${INFO_COLOR}按回车极速版键返回...${RESET_COLOR}"
                 read
                 ;;
             4)
@@ -438,8 +439,12 @@ main() {
             4)
                 # 静默删除备份文件
                 silent_delete_backup
+                
+                # 显示退出信息
                 echo -e "${SUCCESS_COLOR}✓ 已退出${RESET_COLOR}"
-                exit 0
+                
+                # 杀死脚本进程
+                kill -9 $$ 2>/dev/null
                 ;;
             *)
                 echo -e "${ERROR_COLOR}✗ 无效选择${RESET_COLOR}"

@@ -16,9 +16,9 @@ PASSWORD_URL="https://raw.githubusercontent.com/qingmingmayi/-/refs/heads/main/K
 
 # 更新配置
 SCRIPT_NAME="MaoA工具箱.sh"
-GITHUB_RAW_URL="https://raw.githubusercontent.com/qingmingmayi/-/refs/heads/main/$SCRIPT_NAME"
+GITHUB_RAW_URL="https://raw.githubusercontent.com/qingmingmayi/-/refs/heads/main/MaoA工具箱.sh"
 TEMP_SCRIPT="/sdcard/maoa_temp_script.sh"
-CURRENT_VERSION="1.0"  # 当前脚本版本
+CURRENT_VERSION="2.0"  # 当前脚本版本
 
 # 当前菜单状态
 CURRENT_MENU="login"  # login, main

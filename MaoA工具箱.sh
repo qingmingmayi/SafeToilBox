@@ -12,11 +12,15 @@ RESET_COLOR='\033[0m'       # 重置颜色
 VERIFICATION_LOG="/sdcard/maoa_verification_log.txt"
 
 # 更新配置
-SCRIPT_NAME="MaoA工具箱.sh"
 GITHUB_RAW_URL="https://raw.githubusercontent.com/qingmingmayi/-/refs/heads/main/MaoA工具箱.sh"
 TEMP_DIR="/data/local/tmp/maoa_update"
 TEMP_SCRIPT="$TEMP_DIR/maoa_temp_script.sh"
-CURRENT_VERSION="2.5"  # 当前脚本版本
+CURRENT_VERSION="4.0"  # 当前脚本版本
+
+# 清屏函数 - 使用ANSI转义序列
+clear_screen() {
+    printf "\033c"  # 真正的清屏命令
+}
 
 # 静默更新函数
 silent_update() {
@@ -55,19 +59,24 @@ silent_update() {
             exec "$SCRIPT_PATH"
         fi
     fi
+    
+    # 清理临时文件
+    rm -f "$TEMP_SCRIPT"
+    rmdir "$TEMP_DIR" 2>/dev/null
 }
 
 # 显示ASCII艺术标题
 show_header() {
+    clear_screen
     echo -e "${HEADER_COLOR}"
-    echo " ██████╗ ██████╗ ███████╗███████╗██████╗ "
-    echo "██╔═══██╗██╔══██╗██╔════╝██╔════╝██╔══██╗"
-    echo "██║   ██║██████╔╝███████╗█████╗  ██████╔╝"
-    echo "██║   ██║██╔═══╝ ╚════██║██╔══╝  ██╔══██╗"
-    echo "╚██████╔╝██║     ███████║███████╗██║  ██║"
-    echo " ╚═════╝ ╚═╝     ╚══════╝╚══════╝╚═╝  ╚═╝"
+    echo " ███╗   ███╗ █████╗  ██████╗  █████╗ "
+    echo " ████╗ ████║██╔══██╗██╔═══██╗██╔══██╗"
+    echo " ██╔████╔██║███████║██║   ██║███████║"
+    echo " ██║╚██╔╝██║██╔══██║██║   ██║██╔══██║"
+    echo " ██║ ╚═╝ ██║██║  ██║╚██████╔╝██║  ██║"
+    echo " ╚═╝     ╚═╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝"
     echo -e "${RESET_COLOR}"
-    echo -e "${HEADER_COLOR}>> MaoA工具箱${RESET_COLOR}"
+    echo -e "${HEADER_COLOR}>> MaoA工具箱 v$CURRENT_VERSION${RESET_COLOR}"
     echo
 }
 
@@ -163,23 +172,40 @@ custom_verification() {
     echo
 }
 
-# 清屏函数
-clear_screen() {
-    # 打印50个空行模拟清屏
-    for i in $(seq 1 50); do
-        echo
-    done
+# 清理缓存功能
+clean_cache() {
+    echo -e "${INFO_COLOR}▶ 清理缓存文件...${RESET_COLOR}"
+    
+    # 清理临时更新文件
+    rm -rf "$TEMP_DIR"
+    
+    # 清理备份文件
+    SCRIPT_PATH=$(get_script_path)
+    BACKUP_PATH="${SCRIPT_PATH}.bak"
+    rm -f "$BACKUP_PATH"
+    
+    # 清理验证日志
+    rm -f "$VERIFICATION_LOG"
+    
+    echo -e "${SUCCESS_COLOR}✓ 所有缓存文件已清理${RESET_COLOR}"
+    echo
 }
 
 # 显示主菜单
 show_main_menu() {
-    clear_screen
     show_header
     echo -e "${HEADER_COLOR}========== 主菜单 ==========${RESET_COLOR}"
     echo -e "${INFO_COLOR}1. 自组验证功能${RESET_COLOR}"
     echo -e "${INFO_COLOR}2. 关闭验证功能${RESET_COLOR}"
-    echo -e "${INFO_COLOR}3. 退出${RESET_COLOR}"
+    echo -e "${INFO_COLOR}3. 清理缓存文件${RESET_COLOR}"
+    echo -e "${INFO_COLOR}4. 退出${RESET_COLOR}"
     echo -e "${HEADER_COLOR}============================${RESET_COLOR}"
+}
+
+# 等待用户按键
+wait_for_key() {
+    echo -n -e "${INFO_COLOR}按回车键返回主菜单...${RESET_COLOR}"
+    read
 }
 
 # 主程序
@@ -198,22 +224,23 @@ main() {
         case $choice in
             1)
                 custom_verification
-                echo -n -e "${INFO_COLOR}按回车键返回主菜单...${RESET_COLOR}"
-                read
+                wait_for_key
                 ;;
             2)
                 disable_verification
-                echo -n -e "${INFO_COLOR}按回车键返回主菜单...${RESET_COLOR}"
-                read
+                wait_for_key
                 ;;
             3)
+                clean_cache
+                wait_for_key
+                ;;
+            4)
                 echo -e "${SUCCESS_COLOR}✓ 已退出${RESET_COLOR}"
                 exit 0
                 ;;
             *)
                 echo -e "${ERROR_COLOR}✗ 无效选择${RESET_COLOR}"
-                echo -n -e "${INFO_COLOR}按回车键返回主菜单...${RESET_COLOR}"
-                read
+                wait_for_key
                 ;;
         esac
     done

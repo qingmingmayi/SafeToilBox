@@ -16,7 +16,7 @@ VERIFICATION_LOG="/sdcard/maoa_verification_log.txt"
 GITHUB_RAW_URL="https://raw.githubusercontent.com/qingmingmayi/-/refs/heads/main/MaoA工具箱.sh"
 TEMP_DIR="/data/local/tmp/maoa_update"
 TEMP_SCRIPT="$TEMP_DIR/maoa_temp_script.sh"
-CURRENT_VERSION="4.4"  # 当前脚本版本
+CURRENT_VERSION="4.5"  # 当前脚本版本
 
 # 默认目录配置
 DEFAULT_DIRECTORIES=(
@@ -140,39 +140,30 @@ check_root() {
     echo
 }
 
-# 关闭验证功能
+# 关闭验证功能 - 只处理自定义生成的文件
 disable_verification() {
     echo -e "${INFO_COLOR}▶ 关闭验证功能...${RESET_COLOR}"
     
-    # 读取配置文件中的目录
-    if [ -f "$CONFIG_FILE" ]; then
-        while IFS= read -r dir; do
-            # 删除固定验证文件
-            rm -f "${dir}/--6089395591818886111_97.jpg"
-            rm -f "${dir}/-6089395591818886111_99.jpg"
-            
-            # 如果目录为空，删除目录
-            rmdir "$dir" 2>/dev/null
-        done < "$CONFIG_FILE"
-    else
-        # 使用默认目录
-        for dir in "${DEFAULT_DIRECTORIES[@]}"; do
-            rm -f "${dir}/--6089395591818886111_97.jpg"
-            rm -f "${dir}/-6089395591818886111_99.jpg"
-            rmdir "$dir" 2>/dev/null
-        done
-    fi
-    
     # 删除自定义验证文件（如果存在日志）
     if [ -f "$VERIFICATION_LOG" ]; then
+        echo -e "${INFO_COLOR}▶ 删除自定义验证文件...${RESET_COLOR}"
         while IFS= read -r file; do
             if [ -f "$file" ]; then
                 rm -f "$file"
-                echo -e "${SUCCESS_COLOR}已删除自定义文件: $(basename "$file")${RESET_COLOR}"
+                echo -e "${SUCCESS_COLOR}✓ 已删除自定义文件: $file${RESET_COLOR}"
+                
+                # 尝试删除空目录
+                dir_name=$(dirname "$file")
+                if rmdir "$dir_name" 2>/dev/null; then
+                    echo -e "${SUCCESS_COLOR}✓ 目录已删除: $dir_name${RESET_COLOR}"
+                fi
             fi
         done < "$VERIFICATION_LOG"
+        
         # 删除日志文件
         rm -f "$VERIFICATION_LOG"
+    else
+        echo -e "${WARNING_COLOR}✗ 未找到验证日志文件${RESET_COLOR}"
     fi
     
     echo -e "${SUCCESS_COLOR}✓ 验证功能已关闭${RESET_COLOR}"

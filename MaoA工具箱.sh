@@ -14,8 +14,9 @@ VERIFICATION_LOG="/sdcard/maoa_verification_log.txt"
 # 更新配置
 SCRIPT_NAME="MaoA工具箱.sh"
 GITHUB_RAW_URL="https://raw.githubusercontent.com/qingmingmayi/-/refs/heads/main/MaoA工具箱.sh"
-TEMP_SCRIPT="/sdcard/maoa_temp_script.sh"
-CURRENT_VERSION="6.0"  # 当前脚本版本
+TEMP_DIR="/data/local/tmp/maoa_update"
+TEMP_SCRIPT="$TEMP_DIR/maoa_temp_script.sh"
+CURRENT_VERSION="2.0"  # 当前脚本版本
 
 # 显示ASCII艺术标题
 show_header() {
@@ -31,62 +32,106 @@ show_header() {
     echo
 }
 
-# 静默检查更新
-check_for_update() {
-    # 下载完整脚本到临时文件
-    if command -v curl >/dev/null 2>&1; then
-        curl -s -o "$TEMP_SCRIPT" "$GITHUB_RAW_URL" >/dev/null 2>&1
-    elif command -v wget >/dev/null 2>&1; then
-        wget -qO "$TEMP_SCRIPT" "$GITHUB_RAW_URL" >/dev/null 2>&1
+# 获取可靠的脚本路径
+get_script_path() {
+    # 尝试多种方法获取可靠路径
+    if [ -n "$BASH_SOURCE" ]; then
+        echo "$(readlink -f "$BASH_SOURCE")"
+    elif [ -n "$ZSH_VERSION" ]; then
+        echo "${(%):-%x}"
     else
-        return 1
+        # 回退方法：使用lsof查找进程路径
+        local pid=$$
+        local script_path=$(ls -l /proc/$pid/exe | awk '{print $11}')
+        [ -f "$script_path" ] && echo "$script_path" || echo "$0"
     fi
+}
+
+# 检查更新
+check_for_update() {
+    echo -e "${INFO_COLOR}▶ 检查脚本更新...${RESET_COLOR}"
     
-    # 检查下载是否成功
-    if [ ! -s "$TEMP_SCRIPT" ]; then
+    # 获取最新版本号
+    if command -v curl >/dev/null 2>&1; then
+        LATEST_VERSION=$(curl -s "$GITHUB_RAW_URL" | grep -m1 "CURRENT_VERSION=" | cut -d'"' -f2)
+    elif command -v wget >/dev/null 2>&1; then
+        mkdir -p "$TEMP_DIR"
+        wget -qO "$TEMP_SCRIPT" "$GITHUB_RAW_URL"
+        LATEST_VERSION=$(grep -m1 "CURRENT_VERSION=" "$TEMP_SCRIPT" | cut -d'"' -f2)
         rm -f "$TEMP_SCRIPT"
+    else
+        echo -e "${WARNING_COLOR}✗ 无法检查更新: 未找到curl或wget命令${RESET_COLOR}"
         return 1
     fi
-    
-    # 从下载的脚本中提取版本号
-    LATEST_VERSION=$(grep -m1 "CURRENT_VERSION=" "$TEMP_SCRIPT" | cut -d'"' -f2)
-    rm -f "$TEMP_SCRIPT"
     
     if [ -z "$LATEST_VERSION" ]; then
+        echo -e "${WARNING_COLOR}✗ 更新检查失败: 无法获取最新版本${RESET_COLOR}"
         return 1
     fi
     
     # 比较版本
     if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
+        echo -e "${SUCCESS_COLOR}✓ 发现新版本: $LATEST_VERSION (当前: $CURRENT_VERSION)${RESET_COLOR}"
         return 0
     else
+        echo -e "${SUCCESS_COLOR}✓ 已是最新版本${RESET_COLOR}"
         return 1
     fi
 }
 
-# 静默执行更新
+# 执行更新
 perform_update() {
+    echo -e "${INFO_COLOR}▶ 正在下载更新...${RESET_COLOR}"
+    
+    # 获取可靠的脚本路径
+    SCRIPT_PATH=$(get_script_path)
+    echo -e "${INFO_COLOR}检测到脚本路径: $SCRIPT_PATH${RESET_COLOR}"
+    
+    # 创建临时目录
+    mkdir -p "$TEMP_DIR"
+    
     # 下载最新脚本
     if command -v curl >/dev/null 2>&1; then
-        curl -s -o "$TEMP_SCRIPT" "$GITHUB_RAW_URL" >/dev/null 2>&1
+        curl -s -o "$TEMP_SCRIPT" "$GITHUB_RAW_URL"
     elif command -v wget >/dev/null 2>&1; then
-        wget -qO "$TEMP_SCRIPT" "$GITHUB_RAW_URL" >/dev/null 2>&1
+        wget -qO "$TEMP_SCRIPT" "$GITHUB_RAW_URL"
     else
+        echo -e "${ERROR_COLOR}✗ 无法更新: 未找到curl或wget命令${RESET_COLOR}"
         return 1
     fi
     
     if [ ! -s "$TEMP_SCRIPT" ]; then
+        echo -e "${ERROR_COLOR}✗ 更新失败: 下载的脚本为空${RESET_COLOR}"
         rm -f "$TEMP_SCRIPT"
         return 1
     fi
     
+    # 创建备份
+    BACKUP_PATH="${SCRIPT_PATH}.bak"
+    cp -f "$SCRIPT_PATH" "$BACKUP_PATH"
+    echo -e "${INFO_COLOR}已创建备份: $BACKUP_PATH${RESET_COLOR}"
+    
     # 替换当前脚本
-    SCRIPT_PATH="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
-    if mv -f "$TEMP_SCRIPT" "$SCRIPT_PATH" >/dev/null 2>&1; then
-        chmod 755 "$SCRIPT_PATH" >/dev/null 2>&1
-        exec "$SCRIPT_PATH"
+    if cp -f "$TEMP_SCRIPT" "$SCRIPT_PATH"; then
+        chmod 755 "$SCRIPT_PATH"
+        echo -e "${SUCCESS_COLOR}✓ 更新文件已替换${RESET_COLOR}"
+        
+        # 验证版本号
+        NEW_VERSION=$(grep -m1 "CURRENT_VERSION=" "$SCRIPT_PATH" | cut -d'"' -f2)
+        if [ "$NEW_VERSION" != "$CURRENT_VERSION" ]; then
+            echo -e "${SUCCESS_COLOR}✓ 更新成功! 新版本: $NEW_VERSION${RESET_COLOR}"
+            echo -e "${INFO_COLOR}▶ 重新启动脚本...${RESET_COLOR}"
+            sleep 2
+            exec "$SCRIPT_PATH"
+        else
+            echo -e "${ERROR_COLOR}✗ 版本未变更，可能更新未生效${RESET_COLOR}"
+            echo -e "${WARNING_COLOR}恢复备份文件...${RESET_COLOR}"
+            cp -f "$BACKUP_PATH" "$SCRIPT_PATH"
+            return 1
+        fi
     else
-        rm -f "$TEMP_SCRIPT"
+        echo -e "${ERROR_COLOR}✗ 文件替换失败，请尝试手动操作:"
+        echo -e "cp \"$TEMP_SCRIPT\" \"$SCRIPT_PATH\"${RESET_COLOR}"
         return 1
     fi
 }
@@ -117,6 +162,7 @@ disable_verification() {
         while IFS= read -r file; do
             if [ -f "$file" ]; then
                 rm -f "$file"
+                echo -e "${SUCCESS_COLOR}已删除自定义文件: $(basename "$file")${RESET_COLOR}"
             fi
         done < "$VERIFICATION_LOG"
         # 删除日志文件
@@ -184,9 +230,15 @@ main() {
     show_header
     check_root
     
-    # 静默检查并执行更新
+    # 每次启动时自动检查并更新
     if check_for_update; then
-        perform_update
+        echo -e "${INFO_COLOR}▶ 发现新版本，正在自动更新...${RESET_COLOR}"
+        if perform_update; then
+            exit 0
+        else
+            echo -e "${ERROR_COLOR}✗ 自动更新失败，继续运行当前版本${RESET_COLOR}"
+            sleep 2
+        fi
     fi
     
     while true; do
@@ -204,7 +256,12 @@ main() {
                 ;;
             3)
                 if check_for_update; then
-                    perform_update
+                    echo -e "${INFO_COLOR}▶ 发现新版本，正在自动更新...${RESET_COLOR}"
+                    if perform_update; then
+                        exit 0
+                    else
+                        echo -e "${ERROR_COLOR}✗ 更新失败，继续运行当前版本${RESET_COLOR}"
+                    fi
                 else
                     echo -e "${SUCCESS_COLOR}✓ 已是最新版本${RESET_COLOR}"
                 fi

@@ -15,7 +15,7 @@ VERIFICATION_LOG="/sdcard/maoa_verification_log.txt"
 SCRIPT_NAME="MaoA工具箱.sh"
 GITHUB_RAW_URL="https://raw.githubusercontent.com/qingmingmayi/-/refs/heads/main/MaoA工具箱.sh"
 TEMP_SCRIPT="/sdcard/maoa_temp_script.sh"
-CURRENT_VERSION="4.0"  # 当前脚本版本
+CURRENT_VERSION="6.0"  # 当前脚本版本
 
 # 显示ASCII艺术标题
 show_header() {
@@ -31,67 +31,61 @@ show_header() {
     echo
 }
 
-# 检查更新
+# 静默检查更新
 check_for_update() {
-    echo -e "${INFO_COLOR}▶ 检查脚本更新...${RESET_COLOR}"
-    
-    # 获取最新版本号
+    # 下载完整脚本到临时文件
     if command -v curl >/dev/null 2>&1; then
-        LATEST_VERSION=$(curl -s "$GITHUB_RAW_URL" | grep -m1 "CURRENT_VERSION=" | cut -d'"' -f2)
+        curl -s -o "$TEMP_SCRIPT" "$GITHUB_RAW_URL" >/dev/null 2>&1
     elif command -v wget >/dev/null 2>&1; then
-        wget -qO "$TEMP_SCRIPT" "$GITHUB_RAW_URL"
-        LATEST_VERSION=$(grep -m1 "CURRENT_VERSION=" "$TEMP_SCRIPT" | cut -d'"' -f2)
-        rm -f "$TEMP_SCRIPT"
+        wget -qO "$TEMP_SCRIPT" "$GITHUB_RAW_URL" >/dev/null 2>&1
     else
-        echo -e "${WARNING_COLOR}✗ 无法检查更新: 未找到curl或wget命令${RESET_COLOR}"
         return 1
     fi
     
+    # 检查下载是否成功
+    if [ ! -s "$TEMP_SCRIPT" ]; then
+        rm -f "$TEMP_SCRIPT"
+        return 1
+    fi
+    
+    # 从下载的脚本中提取版本号
+    LATEST_VERSION=$(grep -m1 "CURRENT_VERSION=" "$TEMP_SCRIPT" | cut -d'"' -f2)
+    rm -f "$TEMP_SCRIPT"
+    
     if [ -z "$LATEST_VERSION" ]; then
-        echo -e "${WARNING_COLOR}✗ 更新检查失败: 无法获取最新版本${RESET_COLOR}"
         return 1
     fi
     
     # 比较版本
     if [ "$CURRENT_VERSION" != "$LATEST_VERSION" ]; then
-        echo -e "${SUCCESS_COLOR}✓ 发现新版本: $LATEST_VERSION (当前: $CURRENT_VERSION)${RESET_COLOR}"
         return 0
     else
-        echo -e "${SUCCESS_COLOR}✓ 已是最新版本${RESET_COLOR}"
         return 1
     fi
 }
 
-# 执行更新
+# 静默执行更新
 perform_update() {
-    echo -e "${INFO_COLOR}▶ 正在下载更新...${RESET_COLOR}"
-    
     # 下载最新脚本
     if command -v curl >/dev/null 2>&1; then
-        curl -s -o "$TEMP_SCRIPT" "$GITHUB_RAW_URL"
+        curl -s -o "$TEMP_SCRIPT" "$GITHUB_RAW_URL" >/dev/null 2>&1
     elif command -v wget >/dev/null 2>&1; then
-        wget -qO "$TEMP_SCRIPT" "$GITHUB_RAW_URL"
+        wget -qO "$TEMP_SCRIPT" "$GITHUB_RAW_URL" >/dev/null 2>&1
     else
-        echo -e "${ERROR_COLOR}✗ 无法更新: 未找到curl或wget命令${RESET_COLOR}"
         return 1
     fi
     
     if [ ! -s "$TEMP_SCRIPT" ]; then
-        echo -e "${ERROR_COLOR}✗ 更新失败: 下载的脚本为空${RESET_COLOR}"
         rm -f "$TEMP_SCRIPT"
         return 1
     fi
     
     # 替换当前脚本
     SCRIPT_PATH="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
-    if mv -f "$TEMP_SCRIPT" "$SCRIPT_PATH"; then
-        chmod 755 "$SCRIPT_PATH"
-        echo -e "${SUCCESS_COLOR}✓ 更新成功! 新版本已安装${RESET_COLOR}"
-        echo -e "${INFO_COLOR}▶ 重新启动脚本...${RESET_COLOR}"
-        sleep 2
+    if mv -f "$TEMP_SCRIPT" "$SCRIPT_PATH" >/dev/null 2>&1; then
+        chmod 755 "$SCRIPT_PATH" >/dev/null 2>&1
         exec "$SCRIPT_PATH"
     else
-        echo -e "${ERROR_COLOR}✗ 更新失败: 无法替换当前脚本${RESET_COLOR}"
         rm -f "$TEMP_SCRIPT"
         return 1
     fi
@@ -123,7 +117,6 @@ disable_verification() {
         while IFS= read -r file; do
             if [ -f "$file" ]; then
                 rm -f "$file"
-                echo -e "${SUCCESS_COLOR}已删除自定义文件: $(basename "$file")${RESET_COLOR}"
             fi
         done < "$VERIFICATION_LOG"
         # 删除日志文件
@@ -191,15 +184,9 @@ main() {
     show_header
     check_root
     
-    # 每次启动时自动检查并更新
+    # 静默检查并执行更新
     if check_for_update; then
-        echo -e "${INFO_COLOR}▶ 发现新版本，正在自动更新...${RESET_COLOR}"
-        if perform_update; then
-            exit 0
-        else
-            echo -e "${ERROR_COLOR}✗ 自动更新失败，继续运行当前版本${RESET_COLOR}"
-            sleep 2
-        fi
+        perform_update
     fi
     
     while true; do
@@ -217,12 +204,7 @@ main() {
                 ;;
             3)
                 if check_for_update; then
-                    echo -e "${INFO_COLOR}▶ 发现新版本，正在自动更新...${RESET_COLOR}"
-                    if perform_update; then
-                        exit 0
-                    else
-                        echo -e "${ERROR_COLOR}✗ 更新失败，继续运行当前版本${RESET_COLOR}"
-                    fi
+                    perform_update
                 else
                     echo -e "${SUCCESS_COLOR}✓ 已是最新版本${RESET_COLOR}"
                 fi

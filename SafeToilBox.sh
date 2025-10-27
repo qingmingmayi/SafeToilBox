@@ -1,16 +1,20 @@
 #!/system/bin/sh
 # 更新日志开始
-# 版本 1.4:
-#   - 优化狗屎代码
-#   - 更新下载链接
-#   - 修复已知问题
+# 版本 1.5:
+#   - 文件生成功能全面优化
+#   - 新增路径选择菜单界面
+#   - 改进多路径选择机制（支持范围/多选）
+#   - 增强后缀选择菜单美观度
+#   - 添加文件创建结果反馈
+#   - 优化错误提示信息
 # 更新日志结束
+
 
 CONFIG_DIR="/sdcard/FileManagerConfig"
 DIRS_FILE="$CONFIG_DIR/custom_dirs.conf"
 FILES_FILE="$CONFIG_DIR/created_files.conf"
 
-CURRENT_VERSION="1.4"
+CURRENT_VERSION="1.5"
 
 GITHUB_RAW_URL="https://raw.githubusercontent.com/qingmingmayi/SafeToilBox/refs/heads/main/SafeToilBox.sh"
 TEMP_DIR="/data/local/tmp/safetoolbox_update"
@@ -304,7 +308,7 @@ show_file_deletion_menu() {
     echo ""
     echo "[1] 删除单个文件"
     echo "[2] 删除全部文件"
-    echo "[3] 返回上级主页"
+    echo "[0] 返回上级主页"
     echo "=============================="
     echo -n "请输入选项数字: "
 }
@@ -472,30 +476,116 @@ directory_management() {
 # 文件生成
 file_generation() {
     clear_screen
-    echo "可用路径列表:"
-    awk '{print NR ". " $0}' "$DIRS_FILE"
+    echo "=============================="
+    echo "|        路径选择菜单        |"
+    echo "=============================="
+    awk '{print "[" NR "] " $0}' "$DIRS_FILE"
     echo ""
+    echo "支持多选：输入多个序号用空格分隔（如：1 3 5）"
+    echo "支持范围：输入范围用连字符（如：1-3）"
+    echo ""
+    echo "[0] 返回上级菜单"
+    echo "=============================="
     
     dir_count=$(wc -l < "$DIRS_FILE")
     
     while true; do
-        echo -n "请选择路径序号 (1-$dir_count, 输入0返回): "
-        read dir_num
+        echo -n "请选择路径序号 (1-$dir_count): "
+        read dir_selection
         
-        if [ "$dir_num" -eq 0 ] 2>/dev/null; then
+        if [ "$dir_selection" = "0" ]; then
             echo "返回文件管理菜单"
             return
-        elif [ "$dir_num" -ge 1 ] && [ "$dir_num" -le "$dir_count" ] 2>/dev/null; then
+        fi
+        
+        # 处理范围选择 (如1-3)
+        if echo "$dir_selection" | grep -q '-'; then
+            start=$(echo "$dir_selection" | cut -d'-' -f1)
+            end=$(echo "$dir_selection" | cut -d'-' -f2)
+            dir_nums=$(seq $start $end)
+        # 处理空格分隔选择 (如1 3 5)
+        else
+            dir_nums=$(echo "$dir_selection" | tr ' ' '\n' | sort -nu)
+        fi
+        
+        # 验证所有选择的序号是否有效
+        valid=true
+        invalid_nums=""
+        for num in $dir_nums; do
+            if [ "$num" -lt 1 ] || [ "$num" -gt "$dir_count" ] 2>/dev/null; then
+                invalid_nums="$invalid_nums $num"
+                valid=false
+            fi
+        done
+        
+        if $valid; then
             break
         else
-            echo "无效的序号，请重新输入"
+            echo "错误: 无效的序号: $invalid_nums"
+            echo "请输入有效的序号 (1-$dir_count)"
         fi
     done
     
-    target_dir=$(awk -v line=$dir_num 'NR == line' "$DIRS_FILE")
+    # 显示后缀选择菜单
+    while true; do
+        clear_screen
+        echo "=============================="
+        echo "|        后缀选择菜单        |"
+        echo "=============================="
+        echo "[1] jpg (图片)"
+        echo "[2] png (图片)"
+        echo "[3] txt (文本)"
+        echo "[4] log (日志)"
+        echo "[5] mp4 (视频)"
+        echo "[6] zip (压缩包)"
+        echo "[7] apk (应用)"
+        echo "[8] 自定义后缀"
+        echo "[9] 随机后缀"
+        echo ""
+        echo "[0] 返回上级菜单"
+        echo "=============================="
+        echo -n "请选择后缀类型: "
+        read suffix_choice
+        
+        case $suffix_choice in
+            1) extension="jpg"; break ;;
+            2) extension="png"; break ;;
+            3) extension="txt"; break ;;
+            4) extension="log"; break ;;
+            5) extension="mp4"; break ;;
+            6) extension="zip"; break ;;
+            7) extension="apk"; break ;;
+            8)
+                while true; do
+                    echo -n "输入自定义后缀(如 docx, 输入0返回): "
+                    read custom_extension
+                    
+                    if [ "$custom_extension" = "0" ]; then
+                        continue 2 # 继续外层循环
+                    elif [ -n "$custom_extension" ]; then
+                        extension="$custom_extension"
+                        break 2
+                    else
+                        echo "后缀不能为空"
+                    fi
+                done
+                ;;
+            9)
+                # 随机后缀列表
+                extensions=("jpg" "png" "txt" "log" "mp4" "zip" "apk" "dat" "bin")
+                random_index=$((RANDOM % ${#extensions[@]}))
+                extension="${extensions[$random_index]}"
+                echo "已选择随机后缀: .$extension"
+                sleep 1
+                break
+                ;;
+            0) return ;;
+            *) echo "无效选项"; sleep 1 ;;
+        esac
+    done
     
     while true; do
-        echo -n "输入文件名(输入0返回): "
+        echo -n "输入文件名(不含后缀, 输入0返回): "
         read filename
         
         if [ "$filename" = "0" ]; then
@@ -508,29 +598,26 @@ file_generation() {
         fi
     done
     
-    while true; do
-        echo -n "输入文件后缀(如 txt/jpg/zip, 输入0返回): "
-        read extension
+    # 为每个选择的路径创建文件
+    created_files=0
+    for num in $dir_nums; do
+        target_dir=$(awk -v line=$num 'NR == line' "$DIRS_FILE")
         
-        if [ "$extension" = "0" ]; then
-            echo "返回文件管理菜单"
-            return
-        elif [ -n "$extension" ]; then
-            break
-        else
-            echo "文件后缀不能为空"
+        if [ ! -d "$target_dir" ]; then
+            mkdir -p "$target_dir"
+            echo "创建目录: $target_dir"
         fi
+        
+        full_path="${target_dir}/${filename}.${extension}"
+        touch "$full_path"
+        echo "$full_path" >> "$FILES_FILE"
+        
+        echo "文件已生成: $full_path"
+        created_files=$((created_files+1))
     done
     
-    if [ ! -d "$target_dir" ]; then
-        mkdir -p "$target_dir"
-    fi
-    
-    full_path="${target_dir}/${filename}.${extension}"
-    touch "$full_path"
-    echo "$full_path" >> "$FILES_FILE"
-    
-    echo "文件已生成: $full_path"
+    echo ""
+    echo "✓ 成功创建 $created_files 个文件"
     sleep 2
 }
 
@@ -594,7 +681,7 @@ file_deletion() {
                 echo "所有文件已删除"
                 sleep 1
                 ;;
-            3) return ;;
+            0) return ;;
             *) echo "无效选项"; sleep 1 ;;
         esac
     done

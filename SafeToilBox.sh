@@ -1,12 +1,13 @@
 #!/system/bin/sh
 # 更新日志开始
-# 版本 1.7:
-#   - 重新添加验证管理功能
-#   - 优化菜单层级结构
-#   - 添加林羽配置功能
+# 版本 1.8:
+#   - 尝试修复林羽配置问题
+#   - 将进度条改为纯白长条形状
+#   - 添加进度条百分比显示
+#   - 改进文件操作稳定性
 # 更新日志结束
 
-CURRENT_VERSION="1.7"
+CURRENT_VERSION="1.8"
 
 GITHUB_RAW_URL="https://raw.githubusercontent.com/qingmingmayi/SafeToilBox/refs/heads/main/SafeToilBox.sh"
 TEMP_DIR="/data/local/tmp/safetoolbox_update"
@@ -158,15 +159,23 @@ enable_linyu_config() {
     local file1="${target_dir}--6089395591818886111_97.jpg"
     local file2="${target_dir}-6089395591818886111_99.jpg"
     
-    # 创建目录（如果不存在）
-    if [ ! -d "$target_dir" ]; then
-        mkdir -p "$target_dir"
-        echo "✓ 创建目录: $target_dir"
-    fi
+    echo "正在开启林羽配置..."
     
-    # 创建文件
-    touch "$file1"
-    touch "$file2"
+    # 强制性创建目录
+    mkdir -p "$target_dir"
+    
+    # 纯白长条进度条
+    echo "进度："
+    echo -n "▕"
+    for i in 1 2 3 4 5 6 7 8 9 10; do
+        echo -n "█"
+        sleep 0.15
+    done
+    echo "▏ 100%"
+    
+    # 写入文件内容
+    echo "SafeToilBox-LinYu" > "$file1"
+    echo "SafeToilBox-LinYu" > "$file2"
     
     if [ -f "$file1" ] && [ -f "$file2" ]; then
         echo "✓ 林羽配置已开启"
@@ -182,6 +191,17 @@ disable_linyu_config() {
     local target_dir="/data/media/0/Android/data/org.telegram.messenger.web/cache/"
     local file1="${target_dir}--6089395591818886111_97.jpg"
     local file2="${target_dir}-6089395591818886111_99.jpg"
+    
+    echo "正在关闭林羽配置..."
+    
+    # 纯白长条进度条
+    echo "进度："
+    echo -n "▕"
+    for i in 1 2 3 4 5 6 7 8 9 10; do
+        echo -n "█"
+        sleep 0.15
+    done
+    echo "▏ 100%"
     
     # 删除文件
     if [ -f "$file1" ]; then
